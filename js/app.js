@@ -16,44 +16,7 @@ BouncingBalls.prototype.init = function(){
     this.animateBalls();
 
     this.render();
-
-    //Display the axes - usefull for place the elements
-    var axes = buildAxes(1000);
-    this.scene.add(axes);
-
-    function buildAxes(length) {
-        var axes = new THREE.Object3D();
-
-        axes.add(buildAxis(new THREE.Vector3(0, 0, 0), new THREE.Vector3(length, 0, 0), 0xFF0000, false)); // +X
-        axes.add(buildAxis(new THREE.Vector3(0, 0, 0), new THREE.Vector3(-length, 0, 0), 0xFF0000, true)); // -X
-        axes.add(buildAxis(new THREE.Vector3(0, 0, 0), new THREE.Vector3(0, length, 0), 0x00FF00, false)); // +Y
-        axes.add(buildAxis(new THREE.Vector3(0, 0, 0), new THREE.Vector3(0, -length, 0), 0x00FF00, true)); // -Y
-        axes.add(buildAxis(new THREE.Vector3(0, 0, 0), new THREE.Vector3(0, 0, length), 0x0000FF, false)); // +Z
-        axes.add(buildAxis(new THREE.Vector3(0, 0, 0), new THREE.Vector3(0, 0, -length), 0x0000FF, true)); // -Z
-
-        return axes;
-
-    }
-
-    function buildAxis(src, dst, colorHex, dashed) {
-        var geom = new THREE.Geometry(),
-            mat;
-
-        if (dashed) {
-            mat = new THREE.LineDashedMaterial({linewidth: 3, color: colorHex, dashSize: 3, gapSize: 3});
-        } else {
-            mat = new THREE.LineBasicMaterial({linewidth: 3, color: colorHex});
-        }
-
-        geom.vertices.push(src.clone());
-        geom.vertices.push(dst.clone());
-        geom.computeLineDistances(); // This one is SUPER important, otherwise dashed lines will appear as simple plain lines
-
-        var axis = new THREE.Line(geom, mat, THREE.LinePieces);
-
-        return axis;
-
-    }
+    this.datGUI();
 };
 
 BouncingBalls.prototype.createCamera = function(){
@@ -66,46 +29,65 @@ BouncingBalls.prototype.createCamera = function(){
     this.camera.zoom = 1;
     this.camera.updateProjectionMatrix();
 
+    //Adjust the scene to center the balls
+    this.scene.position.z = 170;
+    this.scene.position.y = -70;
+};
+
+/*Display or not 2D view*/
+BouncingBalls.prototype.swap2DView = function(value){
+    if(value == true){
+        this.camera.position.set(100,0,0);
+        this.scene.position.y = -120;
+    }
+    else{
+        this.camera.position.set(100,100,100);
+        this.scene.position.y = -70;
+    }
+    this.controls.update(); //update camera view
 };
 
 BouncingBalls.prototype.createRenderer = function(){
     this.renderer = new THREE.WebGLRenderer({ antialias: true });
     this.renderer.setSize( window.innerWidth, window.innerHeight );
-    this.renderer.setClearColor( 0xf2f2f2);
+    this.renderer.setClearColor( 0xededed);
     this.renderer.shadowMapEnabled = true;
     this.renderer.shadowMapType = THREE.PCFSoftShadowMap;
     this.renderer.shadowMapSoft = true;
     document.body.appendChild( this.renderer.domElement );
     window.addEventListener('resize', this.onWindowResize, false);
+
+    this.controls = new THREE.OrbitControls(this.camera, this.renderer.domElement); //rotate camera with the mouse
+    this.controls.enablePan = false; //disable pan because it causes bugs
 };
 
 BouncingBalls.prototype.createBoxes = function(){
-
-
-   // var geometry = new THREE.BoxGeometry( 50, 50, 50 );
-   // var material = new THREE.MeshLambertMaterial( { color: 0xf2f2f2, shading: THREE.FlatShading});
+    this.spheres = [];
+    var materials = [];
+    var spherePosY = 250;
+    var spherePosZ = 0;
 
     var geometry = new THREE.SphereGeometry( 40, 32, 32 );
-    var material = new THREE.MeshBasicMaterial( {color: 0x5d5d5d} );
-    this.sphere = new THREE.Mesh( geometry, material );
-    this.sphere.position.y = 300;
-    this.scene.add(this.sphere);
+    materials[1] = new THREE.MeshBasicMaterial( {color: 0x669BF2, shading: THREE.SmoothShading} );
+    materials[2] = new THREE.MeshBasicMaterial( {color: 0xEA4335, shading: THREE.SmoothShading} );
+    materials[3] = new THREE.MeshBasicMaterial( {color: 0xFBBC05, shading: THREE.SmoothShading} );
+    materials[4] = new THREE.MeshBasicMaterial( {color: 0x34A853, shading: THREE.SmoothShading} );
 
-    this.sphere2 = new THREE.Mesh( geometry, material );
-    this.sphere2.position.y = 350;
-    this.sphere2.position.z = -120;
-    this.scene.add(this.sphere2);
-
-    this.sphere3 = new THREE.Mesh( geometry, material );
-    this.sphere3.position.y = 400;
-    this.sphere3.position.z = -240;
-    this.scene.add(this.sphere3);
-
+    for(var i=1;i<=4;i++){
+        this.spheres[i] = new THREE.Mesh(geometry, materials[i]);
+        this.spheres[i].position.y = spherePosY;
+        this.spheres[i].position.z = spherePosZ;
+        this.spheres[i].castShadow = true;
+        this.spheres[i].receiveShadow = true;
+        this.scene.add(this.spheres[i]);
+        spherePosY+= 50;
+        spherePosZ+= -120;
+    }
 };
 
 BouncingBalls.prototype.createFloor = function(){
     var geometry2 = new THREE.PlaneBufferGeometry( 1000, 1000);
-    var material2 = new THREE.MeshBasicMaterial( { color: 0xf2f2f2 } );
+    var material2 = new THREE.MeshBasicMaterial( { color: 0xededed } );
     var floor = new THREE.Mesh( geometry2, material2 );
     floor.material.side = THREE.DoubleSide;
     floor.rotation.x = 90*Math.PI/180;
@@ -115,42 +97,38 @@ BouncingBalls.prototype.createFloor = function(){
 };
 
 BouncingBalls.prototype.createLights = function(){
-    this.scene.add(new THREE.AmbientLight(0x5b5b5b));
-
     var shadowLight = new THREE.DirectionalLight( 0xffffff, 0.5 );
-    shadowLight.position.set( -1000, 1000, 0 );
+    shadowLight.position.set( -400, 1000, 0 );
     shadowLight.target.position.set(this.scene.position);
     shadowLight.castShadow = true;
     shadowLight.shadowDarkness = 0.1;
     //shadowLight.shadowCameraVisible = true;
     this.scene.add(shadowLight);
-
-    var directionalLight = new THREE.DirectionalLight( 0xffffff, 0.5 );
-    directionalLight.position.set( -1000, 1000, 0 );
-    directionalLight.target.position.set(this.scene.position);
-    this.scene.add( directionalLight );
 };
-
 
 
 BouncingBalls.prototype.animateBalls = function(){
     this.tl = new TimelineMax({repeat: -1 , repeatDelay:0});
-    this.tl.to(this.sphere.position, 0.6, {y: 40, ease: Power2.easeIn});
-    this.tl.to(this.sphere.position, 1, {y: 400, ease: Power2.easeOut});
+    this.tl.to(this.spheres[1].position, 0.6, {y: 40, ease: Power2.easeIn});
+    this.tl.to(this.spheres[1].position, 0.95, {y: 250, ease: Circ.easeOut});
 
     this.t2 = new TimelineMax({repeat: -1 , repeatDelay:0});
-    this.t2.to(this.sphere2.position, 0.8, {y: 40, ease: Power2.easeIn});
-    this.t2.to(this.sphere2.position, 1, {y: 400, ease: Power2.easeOut});
+    this.t2.to(this.spheres[2].position, 0.75, {y: 40, ease: Power2.easeIn});
+    this.t2.to(this.spheres[2].position, 0.8, {y: 300, ease: Circ.easeOut});
 
     this.t3 = new TimelineMax({repeat: -1 , repeatDelay:0});
-    this.t3.to(this.sphere3.position, 1, {y: 40, ease: Power2.easeIn});
-    this.t3.to(this.sphere3.position, 1, {y: 400, ease: Power2.easeOut})
+    this.t3.to(this.spheres[3].position, 0.9, {y: 40, ease: Power2.easeIn});
+    this.t3.to(this.spheres[3].position, 0.65, {y: 350, ease: Circ.easeOut});
+
+    this.t4 = new TimelineMax({repeat: -1 , repeatDelay:0});
+    this.t4.to(this.spheres[4].position, 1.05, {y: 40, ease: Power2.easeIn});
+    this.t4.to(this.spheres[4].position, 0.50, {y: 400, ease: Circ.easeOut});
 };
 
 
 BouncingBalls.prototype.render = function(){
     requestAnimationFrame(this.render.bind(this));
-    this.renderer.render(this.scene, this.camera);
+    this.renderer.render(this.scene, that.camera);
 };
 
 BouncingBalls.prototype.onWindowResize = function(){
@@ -162,8 +140,20 @@ BouncingBalls.prototype.onWindowResize = function(){
     that.renderer.setSize(window.innerWidth, window.innerHeight);
 };
 
+/*User interface - display or not 2D view*/
+BouncingBalls.prototype.datGUI = function(){
+    var Configuration = function(){
+      this.view2D = false;
+    };
+    var config = new Configuration();
+
+    var gui = new dat.GUI();
+    gui.add(config, 'view2D').onFinishChange(function(){
+        that.swap2DView(config.view2D);
+    });
+
+
+};
+
 var bouncingBalls = new BouncingBalls();
 bouncingBalls.init();
-
-
-
