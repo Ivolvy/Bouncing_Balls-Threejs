@@ -26,7 +26,7 @@ BouncingBalls.prototype.createCamera = function(){
     this.camera.position.z = 100;
 
     this.camera.lookAt(new THREE.Vector3(0,0,0));
-    this.camera.zoom = 1;
+    this.camera.zoom = 0.5;
     this.camera.updateProjectionMatrix();
 
     //Adjust the scene to center the balls
@@ -136,7 +136,7 @@ BouncingBalls.prototype.onWindowResize = function(){
     that.camera.right = window.innerWidth / 2;
     that.camera.top = window.innerHeight / 2;
     that.camera.bottom = window.innerHeight / -2;
-
+    that.camera.updateProjectionMatrix();
     that.renderer.setSize(window.innerWidth, window.innerHeight);
 };
 
